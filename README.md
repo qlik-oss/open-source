@@ -6,7 +6,7 @@ This repository is used to give an overview of the open-source efforts at Qlik R
 
 - [Code of conduct](CODE_OF_CONDUCT.md)
 - [Sign the CLA](sign-cla.md)
-- [Contributors list](tree/master/contributors)
+- [Contributors list](contributors/)
 - [Contributor License Agreement 1.0](cla-v1.0.md)
 - [List of OSS Projects at Qlik R&D](#oss-projects)
 
