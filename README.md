@@ -37,3 +37,4 @@ On behalf of Qlik R&D, thank you again and we look forward working with you!
 - [enigma.js](https://github.com/qlik-oss/enigma.js)
 - [leonardo-ui](https://github.com/qlik-oss/leonardo-ui)
 - [after-work.js](https://github.com/qlik-oss/after-work.js)
+- [halyard.js](https://github.com/qlik-oss/halyard.js)
