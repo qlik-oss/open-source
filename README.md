@@ -38,3 +38,5 @@ On behalf of Qlik R&D, thank you again and we look forward working with you!
 - [leonardo-ui](https://github.com/qlik-oss/leonardo-ui)
 - [after-work.js](https://github.com/qlik-oss/after-work.js)
 - [halyard.js](https://github.com/qlik-oss/halyard.js)
+- [server-side-extension](https://github.com/qlik-oss/server-side-extension)
+- [sse-r-plugin](https://github.com/qlik-oss/sse-r-plugin)
