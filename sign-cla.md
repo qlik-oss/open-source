@@ -5,7 +5,7 @@ This page outlines the (relatively simple) process of signing a Qlik Contributor
 
 The steps needed are:
 
-1. Read the [Contributor License Agreement](cla-v1.0.md).
+1. Read the [Contributor License Agreement](cla-v1.1.md).
 
 2. Sign up for a [GitHub account](https://github.com/join) if you do not already have one.
 
@@ -41,7 +41,7 @@ Use the template below and fill in the bracketed text with the appropriate infor
 [date]
 
 By introducing this file I hereby agree to the terms of the Qlik R&D Contributors License
-Agreement, version 1.0, with MD5 checksum: e4ed5b420a8c9400390a55ac12dad65b.
+Agreement, version 1.0, with MD5 checksum: 0eacd5f1356915f6a5b3b5f5a649bc1a.
 
 I furthermore declare that I am authorized and able to make this agreement.
 
@@ -51,7 +51,7 @@ Signed,
 https://github.com/[githubid]
 ```
 
-You can confirm the MD5 checksum of the CLA by running the `md5` program on the [cla-v1.0.md](cla-v1.0.md) file.
+You can confirm the MD5 checksum of the CLA by running the `md5` program on the [cla-v1.1.md](cla-v1.1.md) file.
 
 On Linux, Mac, or Windows (using the Git Bash):
 
