@@ -42,3 +42,4 @@ On behalf of Qlik R&D, thank you again and we look forward working with you!
 - [sse-r-plugin](https://github.com/qlik-oss/sse-r-plugin)
 - [nprinting-adsync](https://github.com/qlik-oss/nprinting-adsync)
 - [qlik-sense-visualization-extension-testing](https://github.com/qlik-oss/qlik-sense-visualization-extension-testing)
+- [picasso.js](https://github.com/qlik-oss/picasso.js)
