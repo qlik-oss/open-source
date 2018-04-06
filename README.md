@@ -34,12 +34,4 @@ On behalf of Qlik R&D, thank you again and we look forward working with you!
 
 ## <a name="oss-projects"></a>List of OSS Projects at Qlik R&D
 
-- [enigma.js](https://github.com/qlik-oss/enigma.js)
-- [leonardo-ui](https://github.com/qlik-oss/leonardo-ui)
-- [after-work.js](https://github.com/qlik-oss/after-work.js)
-- [halyard.js](https://github.com/qlik-oss/halyard.js)
-- [server-side-extension](https://github.com/qlik-oss/server-side-extension)
-- [sse-r-plugin](https://github.com/qlik-oss/sse-r-plugin)
-- [nprinting-adsync](https://github.com/qlik-oss/nprinting-adsync)
-- [qlik-sense-visualization-extension-testing](https://github.com/qlik-oss/qlik-sense-visualization-extension-testing)
-- [picasso.js](https://github.com/qlik-oss/picasso.js)
+Please see [https://github.com/qlik-oss/](https://github.com/qlik-oss/) for the full list of open-source projects authored by Qlik R&D!
