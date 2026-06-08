@@ -1,0 +1,255 @@
+name: Validate CLA Signature
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'contributors/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  validate:
+    name: Validate CLA file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate and comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prAuthor = context.payload.pull_request.user.login;
+            const prUrl = context.payload.pull_request.html_url;
+            const { owner, repo } = context.repo;
+            const errors = [];
+
+            // ── 1. Get all changed files ──────────────────────────────────
+            const { data: changedFiles } = await github.rest.pulls.listFiles({
+              owner, repo, pull_number: prNumber, per_page: 100
+            });
+
+            // ── 2. No changes outside contributors/ ──────────────────────
+            const outsideFiles = changedFiles.filter(f => !f.filename.startsWith('contributors/'));
+            if (outsideFiles.length > 0) {
+              errors.push(
+                'Changes outside `contributors/` are not allowed in a CLA PR. ' +
+                'Unexpected file(s): ' + outsideFiles.map(f => '`' + f.filename + '`').join(', ')
+              );
+            }
+
+            // ── 3. Exactly one file added; none modified or deleted ───────
+            const addedFiles = changedFiles.filter(
+              f => f.status === 'added' && f.filename.startsWith('contributors/')
+            );
+            const modifiedOrDeleted = changedFiles.filter(
+              f => f.status !== 'added' && f.filename.startsWith('contributors/')
+            );
+
+            if (modifiedOrDeleted.length > 0) {
+              errors.push(
+                'This PR modifies or deletes existing contributor file(s): ' +
+                modifiedOrDeleted.map(f => '`' + f.filename + '`').join(', ') +
+                '. Only a single new file should be added.'
+              );
+            }
+
+            if (addedFiles.length === 0) {
+              errors.push(
+                'No new file was found in `contributors/`. ' +
+                'Add a file named `contributors/' + prAuthor + '.md`.'
+              );
+            } else if (addedFiles.length > 1) {
+              errors.push(
+                'This PR adds ' + addedFiles.length + ' new files but must add exactly one - ' +
+                'your own CLA signature file.'
+              );
+            }
+
+            // ── 4. Filename must match the PR author's GitHub username ────
+            const expectedFilename = 'contributors/' + prAuthor + '.md';
+            if (addedFiles.length === 1 && addedFiles[0].filename !== expectedFilename) {
+              errors.push(
+                'Filename `' + addedFiles[0].filename + '` does not match your GitHub username ' +
+                '(`' + prAuthor + '`). Rename the file to `' + expectedFilename + '`.'
+              );
+            }
+
+            // ── 5. Validate file content ──────────────────────────────────
+            const targetFile = addedFiles.length === 1 ? addedFiles[0] : null;
+            const filenameOk = targetFile && targetFile.filename === expectedFilename;
+
+            if (filenameOk) {
+              const { data: fileData } = await github.rest.repos.getContent({
+                owner, repo,
+                path: targetFile.filename,
+                ref: context.payload.pull_request.head.sha
+              });
+
+              const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+              const lines = content.split('\n');
+
+              // Date: first line must be YYYY-MM-DD
+              const firstLine = lines[0].trim();
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(firstLine)) {
+                const today = new Date().toISOString().split('T')[0];
+                errors.push(
+                  'Date format is incorrect. Found: `' + firstLine + '`. ' +
+                  'Use `YYYY-MM-DD` format (e.g. `' + today + '`).'
+                );
+              }
+
+              // Agreement text
+              if (!content.includes(
+                'By introducing this file I hereby agree to the terms of the Qlik R&D Contributors License'
+              )) {
+                errors.push(
+                  'The agreement text is missing or has been modified. ' +
+                  'Use the template from [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/master/sign-cla.md) exactly.'
+                );
+              }
+
+              // Fetch cla-v1.0.md from the base branch and compute its MD5 at runtime
+              const crypto = require('crypto');
+              const { data: claFileData } = await github.rest.repos.getContent({
+                owner, repo, path: 'cla-v1.0.md',
+                ref: context.payload.pull_request.base.ref
+              });
+              const computedChecksum = crypto
+                .createHash('md5')
+                .update(Buffer.from(claFileData.content, 'base64'))
+                .digest('hex');
+
+              // Extract the MD5 from the contributor file and compare
+              const checksumMatch = content.match(/with MD5 checksum:\s*([a-f0-9]{32})/i);
+              if (!checksumMatch) {
+                errors.push(
+                  'The MD5 checksum line is missing or malformed. ' +
+                  'The file must contain: `with MD5 checksum: ' + computedChecksum + '`'
+                );
+              } else if (checksumMatch[1] !== computedChecksum) {
+                errors.push(
+                  'MD5 checksum mismatch. Your file contains `' + checksumMatch[1] + '` but ' +
+                  '`cla-v1.0.md` currently computes to `' + computedChecksum + '`. ' +
+                  'Run `md5 cla-v1.0.md` in the repo root to get the correct value.'
+                );
+              }
+
+              // Declaration line
+              if (!content.includes('I furthermore declare that I am authorized and able to make this agreement.')) {
+                errors.push(
+                  'The declaration line is missing or modified: ' +
+                  '_"I furthermore declare that I am authorized and able to make this agreement."_'
+                );
+              }
+
+              // "Signed," block must match the exact format:
+              //   Signed,
+              //   <blank line>
+              //   <full name>
+              //   https://github.com/<author>
+              const expectedURL = 'https://github.com/' + prAuthor;
+              const signedIndex = lines.findIndex(l => l.trim() === 'Signed,');
+              if (signedIndex === -1) {
+                errors.push('The `Signed,` line is missing.');
+              } else {
+                const lineAfterSigned = lines[signedIndex + 1];
+                if (lineAfterSigned === undefined || lineAfterSigned.trim() !== '') {
+                  errors.push(
+                    'There must be a blank line between `Signed,` and your name. ' +
+                    'Expected format:\n```\nSigned,\n\n[Your Name]\n' + expectedURL + '\n```'
+                  );
+                } else {
+                  const nameLine = (lines[signedIndex + 2] || '').trim();
+                  if (!nameLine || nameLine === '[name]') {
+                    errors.push(
+                      'Your full legal name is missing after `Signed,`. ' +
+                      'Replace `[name]` with your actual full name.'
+                    );
+                  } else if (/^\[.+\]$/.test(nameLine)) {
+                    errors.push(
+                      '`' + nameLine + '` looks like an unfilled placeholder. ' +
+                      'Replace it with your full legal name (no square brackets).'
+                    );
+                  } else if (nameLine.startsWith('https://')) {
+                    errors.push(
+                      'Your full legal name is missing after `Signed,`. ' +
+                      'It must appear on its own line before the GitHub URL.'
+                    );
+                  } else {
+                    const urlLine = (lines[signedIndex + 3] || '').trim();
+                    if (urlLine !== expectedURL) {
+                      errors.push(
+                        'GitHub URL `' + expectedURL + '` must appear on the line immediately after your name. ' +
+                        'Found: `' + (urlLine || '(empty)') + '`'
+                      );
+                    }
+                  }
+                }
+              }
+            }
+
+            // ── 6. Upsert comment ─────────────────────────────────────────
+            const MARKER = '<!-- cla-validation-check -->';
+
+            const { data: existingComments } = await github.rest.issues.listComments({
+              owner, repo, issue_number: prNumber, per_page: 100
+            });
+            const existing = existingComments.find(c => c.body.includes(MARKER));
+
+            let bodyLines;
+            if (errors.length > 0) {
+              bodyLines = [
+                MARKER,
+                '## ❌ CLA Signature Check - Issues Found',
+                '',
+                'The following problems were found with your submission. Please fix them and push an update to this PR.',
+                '',
+                ...errors.map(e => '- ' + e),
+                '',
+                'Refer to [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/master/sign-cla.md) for the full instructions and template.'
+              ];
+            } else {
+              bodyLines = [
+                MARKER,
+                '## ✅ CLA Signature Check - Passed',
+                '',
+                'Your signature file looks correct!',
+                '',
+                '**Next step - send an email to complete the signing process:**',
+                '',
+                '```',
+                'To: sign-cla@qlik.com',
+                'Subject: CLA',
+                '',
+                'I submitted a CLA Pull Request here: ' + prUrl,
+                '',
+                'Signed,',
+                '',
+                '[Your full legal name]',
+                'https://github.com/' + prAuthor,
+                '[Your full physical address]',
+                '[Your phone number including country code]',
+                '```',
+                '',
+                'A Qlik R&D member will review and merge this PR once your email is received.'
+              ];
+            }
+
+            const body = bodyLines.join('\n');
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: prNumber, body
+              });
+            }
+
+            if (errors.length > 0) {
+              core.setFailed('CLA validation failed with ' + errors.length + ' error(s).');
+            }
