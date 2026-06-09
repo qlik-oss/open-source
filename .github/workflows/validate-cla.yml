@@ -2,7 +2,7 @@ name: Validate CLA Signature
 
 on:
   pull_request:
-    branches: [master]
+    branches: [$default-branch]
     paths:
       - 'contributors/**'
     types: [opened, synchronize, reopened]
