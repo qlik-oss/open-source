@@ -2,9 +2,9 @@ name: Validate CLA Signature
 
 on:
   pull_request:
-    branches: [$default-branch]
+    branches: [master]
     paths:
-      - 'contributors/**'
+      - "contributors/**"
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -23,6 +23,7 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const prAuthor = context.payload.pull_request.user.login;
             const prUrl = context.payload.pull_request.html_url;
+            const baseBranch = context.payload.pull_request.base.ref;
             const { owner, repo } = context.repo;
             const errors = [];
 
@@ -78,13 +79,12 @@ jobs:
             }
 
             // ── 5. Validate file content ──────────────────────────────────
-            const targetFile = addedFiles.length === 1 ? addedFiles[0] : null;
-            const filenameOk = targetFile && targetFile.filename === expectedFilename;
-
-            if (filenameOk) {
+            // Run content checks whenever exactly one file was added, even if
+            // the filename is wrong, so contributors see all errors at once.
+            if (addedFiles.length === 1) {
               const { data: fileData } = await github.rest.repos.getContent({
                 owner, repo,
-                path: targetFile.filename,
+                path: addedFiles[0].filename,
                 ref: context.payload.pull_request.head.sha
               });
 
@@ -107,7 +107,7 @@ jobs:
               )) {
                 errors.push(
                   'The agreement text is missing or has been modified. ' +
-                  'Use the template from [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/master/sign-cla.md) exactly.'
+                  'Use the template from [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/' + baseBranch + '/sign-cla.md) exactly.'
                 );
               }
 
@@ -115,7 +115,7 @@ jobs:
               const crypto = require('crypto');
               const { data: claFileData } = await github.rest.repos.getContent({
                 owner, repo, path: 'cla-v1.0.md',
-                ref: context.payload.pull_request.base.ref
+                ref: baseBranch
               });
               const computedChecksum = crypto
                 .createHash('md5')
@@ -209,7 +209,7 @@ jobs:
                 '',
                 ...errors.map(e => '- ' + e),
                 '',
-                'Refer to [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/master/sign-cla.md) for the full instructions and template.'
+                'Refer to [sign-cla.md](https://github.com/' + owner + '/' + repo + '/blob/' + baseBranch + '/sign-cla.md) for the full instructions and template.'
               ];
             } else {
               bodyLines = [
