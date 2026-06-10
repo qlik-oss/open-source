@@ -7,5 +7,5 @@ I furthermore declare that I am authorized and able to make this agreement.
 
 Signed,
 
-Ahmed Nuaman
-https://github.com/aihazm
+Mike Tyson
+https://github.com/I_do_not_exist%&%
